@@ -4,9 +4,8 @@ package com.onlinetutorialspoint.model;
 import lombok.Getter;
 import lombok.Setter;
 
-import javax.persistence.Entity;
-import javax.persistence.Id;
-import javax.persistence.Table;
+import javax.persistence.*;
+import java.util.Date;
 
 @Getter
 @Setter
@@ -17,6 +16,8 @@ public class Item {
     private int id;
     private String name;
     private String category;
+    @Temporal(TemporalType.TIMESTAMP)
+    Date date;
 
     public Item() {
     }
