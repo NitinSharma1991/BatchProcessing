@@ -37,6 +37,8 @@ public class SpringBatchConfig {
     ItemWriter<Item2> itemWriter;
     @Value("${input1}")
     private String path;
+    @Value("${input}")
+    Resource resource;
 
     @Bean
     public Step step2() {
@@ -57,8 +59,8 @@ public class SpringBatchConfig {
                    ItemProcessor<Item, Item> itemProcessor,
                    ItemWriter<Item> itemWriter) {
         Step step1 = stepBuilderFactory.get("BillingStep1")
-                .<Item, Item>chunk(100)
-                .reader(itemReader)
+                .<Item, Item>chunk(2)
+                .reader(itemReader())
                 .processor(itemProcessor)
                 .writer(itemWriter)
                 .build();
@@ -77,7 +79,7 @@ public class SpringBatchConfig {
     }
 
     @Bean
-    public FlatFileItemReader<Item> itemReader(@Value("${input}") Resource resource) {
+    public FlatFileItemReader<Item> itemReader() {
         FlatFileItemReader<Item> itemFlatFileItemReader = new FlatFileItemReader<>();
         itemFlatFileItemReader.setResource(resource);
         itemFlatFileItemReader.setName("CSV-Reader");
@@ -104,18 +106,15 @@ public class SpringBatchConfig {
 
     @Bean
     public LineMapper<Item> lineMapper() {
-        DefaultLineMapper defaultLineMapper = new DefaultLineMapper();
+        DefaultLineMapper<Item>defaultLineMapper = new DefaultLineMapper<Item>();
 
         DelimitedLineTokenizer lineTokenizer = new DelimitedLineTokenizer();
-        lineTokenizer.setDelimiter(",");
+//        lineTokenizer.setDelimiter(",");
         lineTokenizer.setStrict(false);
         lineTokenizer.setNames(new String[]{"id", "name", "category"});
 
-        BeanWrapperFieldSetMapper<Item> beanWrapperFieldSetMapper = new BeanWrapperFieldSetMapper<>();
-        beanWrapperFieldSetMapper.setTargetType(Item.class);
-
         defaultLineMapper.setLineTokenizer(lineTokenizer);
-        defaultLineMapper.setFieldSetMapper(beanWrapperFieldSetMapper);
+        defaultLineMapper.setFieldSetMapper(new ItemFieldSetMApper());
 
         return defaultLineMapper;
     }
