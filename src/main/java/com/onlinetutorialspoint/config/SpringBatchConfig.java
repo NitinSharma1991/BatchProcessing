@@ -1,5 +1,6 @@
 package com.onlinetutorialspoint.config;
 
+import com.onlinetutorialspoint.Service.DBWriter;
 import com.onlinetutorialspoint.model.Item;
 import com.onlinetutorialspoint.model.Item2;
 import org.springframework.batch.core.Job;
@@ -12,16 +13,18 @@ import org.springframework.batch.item.ItemProcessor;
 import org.springframework.batch.item.ItemReader;
 import org.springframework.batch.item.ItemWriter;
 import org.springframework.batch.item.file.FlatFileItemReader;
+import org.springframework.batch.item.file.FlatFileItemWriter;
 import org.springframework.batch.item.file.LineMapper;
 import org.springframework.batch.item.file.mapping.BeanWrapperFieldSetMapper;
 import org.springframework.batch.item.file.mapping.DefaultLineMapper;
+import org.springframework.batch.item.file.transform.BeanWrapperFieldExtractor;
+import org.springframework.batch.item.file.transform.DelimitedLineAggregator;
 import org.springframework.batch.item.file.transform.DelimitedLineTokenizer;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.PropertySource;
-import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
 
@@ -35,10 +38,12 @@ public class SpringBatchConfig {
     ItemProcessor<Item2, Item2> itemProcessor1;
     @Autowired
     ItemWriter<Item2> itemWriter;
-    @Value("${input1}")
-    private String path;
     @Value("${input}")
     Resource resource;
+    @Value("${input1}")
+    private String path;
+    @Value("${input2}")
+    private String path1;
 
     @Bean
     public Step step2() {
@@ -56,13 +61,12 @@ public class SpringBatchConfig {
     public Job job(JobBuilderFactory jobBuilderFactory,
                    StepBuilderFactory stepBuilderFactory,
                    ItemReader<Item> itemReader,
-                   ItemProcessor<Item, Item> itemProcessor,
-                   ItemWriter<Item> itemWriter) {
+                   ItemProcessor<Item, Item> itemProcessor) {
         Step step1 = stepBuilderFactory.get("BillingStep1")
                 .<Item, Item>chunk(2)
                 .reader(itemReader())
                 .processor(itemProcessor)
-                .writer(itemWriter)
+                .writer(itemWriter())
                 .build();
         /*Step step2 = stepBuilderFactory.get("BillingStep2")
                 .<Item, Item>chunk(100)
@@ -76,6 +80,20 @@ public class SpringBatchConfig {
                 .start(step1)
                 .next(step2())
                 .build();
+    }
+
+    public ItemWriter<? super Item> itemWriter() {
+        FlatFileItemWriter itemWriter = new FlatFileItemWriter();
+        Resource resource = null;
+        resource = new FileSystemResource(path1);
+        itemWriter.setResource(resource);
+        DelimitedLineAggregator<Item> aggregator = new DelimitedLineAggregator<Item>();
+        aggregator.setDelimiter(",");
+        BeanWrapperFieldExtractor<Item> fieldExtractor = new BeanWrapperFieldExtractor<Item>();
+        fieldExtractor.setNames(new String[]{"id", "name", "category"});
+        aggregator.setFieldExtractor(fieldExtractor);
+        itemWriter.setLineAggregator(aggregator);
+        return itemWriter;
     }
 
     @Bean
@@ -106,7 +124,7 @@ public class SpringBatchConfig {
 
     @Bean
     public LineMapper<Item> lineMapper() {
-        DefaultLineMapper<Item>defaultLineMapper = new DefaultLineMapper<Item>();
+        DefaultLineMapper<Item> defaultLineMapper = new DefaultLineMapper<Item>();
 
         DelimitedLineTokenizer lineTokenizer = new DelimitedLineTokenizer();
 //        lineTokenizer.setDelimiter(",");
